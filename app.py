@@ -603,5 +603,3 @@ if __name__ == "__main__":
     print("🤖 Void Free Fire Bot is running...")
     bot.remove_webhook()
     bot.infinity_polling(skip_pending=True)
-
-```
