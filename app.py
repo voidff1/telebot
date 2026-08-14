@@ -30,22 +30,14 @@ API_TOKEN = '8928908790:AAFRY0y4Q4JOxYhL__oB4Gznt6VxqlYlL7c'
 ADMIN_ID = 8853790254  # Your Telegram User ID
 bot = telebot.TeleBot(API_TOKEN)
 
-# REGISTER BOT COMMAND MENU (AUTO-COMPLETE ON '/')
+# REGISTER ONLY YOUR ACTUAL BOT COMMANDS IN TELEGRAM MENU
 bot.set_my_commands([
     types.BotCommand("start", "Start the bot"),
     types.BotCommand("menu", "Open main menu"),
     types.BotCommand("help", "Show help & info"),
     types.BotCommand("get", "Get Player Dossier & Outfit"),
     types.BotCommand("guild", "Get Full Guild Information"),
-    types.BotCommand("like", "Send Free Fire Likes"),
-    types.BotCommand("ps", "Check Player Real Time Status"),
-    types.BotCommand("bundle", "Bot will equip specific bundle"),
-    types.BotCommand("emote", "Send any normal emote to squad"),
-    types.BotCommand("lemote", "Send normal emote through loop"),
-    types.BotCommand("evo_emote", "Send any evo emote to squad"),
-    types.BotCommand("levo_emote", "Send all evo emote to squad"),
-    types.BotCommand("5", "Create 5 player squad"),
-    types.BotCommand("6", "Create 6 player squad")
+    types.BotCommand("like", "Send Free Fire Likes")
 ])
 
 # APIs
@@ -254,15 +246,6 @@ def main_router(message):
             "├─ <code>/get [UID or Name]</code>\n"
             "├─ <code>/guild [Guild ID] [Region]</code>\n"
             "└─ <code>/like [Region] [UID]</code>\n\n"
-            "🤖 <b>Bot Actions:</b>\n"
-            "├─ <code>/ps</code> - Check Player Real Time Status\n"
-            "├─ <code>/bundle</code> - Equip specific bundle\n"
-            "├─ <code>/emote</code> - Send emote to squad\n"
-            "├─ <code>/lemote</code> - Send emote loop\n"
-            "├─ <code>/evo_emote</code> - Send evo emote\n"
-            "├─ <code>/levo_emote</code> - Send all evo emotes\n"
-            "├─ <code>/5</code> - Create 5 player squad\n"
-            "└─ <code>/6</code> - Create 6 player squad\n\n"
             "🔐 <b>Garena Account Security:</b>\n"
             "├─ Check Recovery Email\n"
             "├─ Add Recovery Email\n"
@@ -275,11 +258,6 @@ def main_router(message):
             "📱 <b>Support & Inquiries:</b> @voidffx1"
         )
         bot.reply_to(message, help_text, parse_mode='HTML', disable_web_page_preview=True)
-
-    # Custom Menu Commands Response
-    elif text.startswith(('/ps', '/bundle', '/emote', '/lemote', '/evo_emote', '/levo_emote', '/5', '/6')):
-        cmd = text.split()[0]
-        bot.reply_to(message, f"⚙️ <b>Command <code>{cmd}</code> Received!</b>\n\n<i>This feature requires an active server session.</i>", parse_mode='HTML')
 
     # Slash Command: /guild <Guild ID> <Region>
     elif text.startswith('/guild'):
