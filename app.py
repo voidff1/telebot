@@ -30,25 +30,9 @@ API_TOKEN = '8928908790:AAE5Tc5UCXJlpkKVtguQO-PbePxoMzwq2to'
 ADMIN_ID = 8853790254  # Your Telegram User ID
 bot = telebot.TeleBot(API_TOKEN)
 
-# RESET TELEGRAM MENU TO ONLY ACTIVE COMMANDS
-try:
-    bot.delete_my_commands()
-    bot.set_my_commands([
-        types.BotCommand("start", "Start the bot"),
-        types.BotCommand("menu", "Open main menu"),
-        types.BotCommand("help", "Show help & info"),
-        types.BotCommand("get", "Get Player Dossier & Outfit"),
-        types.BotCommand("guild", "Get Full Guild Information"),
-        types.BotCommand("like", "Send Free Fire Likes")
-    ])
-except Exception as e:
-    print(f"Command update notice: {e}")
-
 # APIs
 BIO_API_URL = "https://star-bio-api.lovable.app/api/public/bio-upload"
-LIKE_API_URL = "https://najmi-ob54-like.vercel.app/like"
 UNSUB_OTP_URL = "https://sso-register-killersharmabot.vercel.app/send-email"
-GUILD_API_URL = "https://star-guild-info.lovable.app/api/public/info"
 
 # Required Channels for Force Sub
 CHANNELS = [
@@ -74,54 +58,6 @@ def check_user_joined_all(user_id):
             print(f"Force Sub Error for {ch['username']}: {e}")
             return False
     return True
-
-def fetch_player_data_by_uid_or_name(search_parameter):
-    if search_parameter.isdigit():
-        url = f"https://info.strikerxyash.online/player-info?uid={search_parameter}"
-    else:
-        url = f"https://info.strikerxyash.online/player-info?name={search_parameter}"
-    
-    try:
-        response = requests.get(url, timeout=10)
-        if response.status_code != 200:
-            return None
-        data = response.json()
-        basic_info = data.get("basicInfo", {})
-        return (
-            basic_info.get("accountId", "N/A"),
-            basic_info.get("nickname", "N/A"),
-            basic_info.get("region", "Not Chosen"),
-            data
-        )
-    except Exception as e:
-        print(f"Player Info Error: {e}")
-        return None
-
-def fetch_outfit_image(player_data):
-    basic_information = player_data.get("basicInfo", {})
-    profile_information = player_data.get("profileInfo", {})
-
-    equipped_weapons = basic_information.get("weaponSkinShows", [])
-    equipped_outfits = profile_information.get("clothes", [])
-    character_id = profile_information.get("avatarId", "102000007")
-
-    outfit_ids = ",".join(
-        str(item) for item in (equipped_outfits + equipped_weapons)
-    ) if (equipped_outfits or equipped_weapons) else ""
-
-    url = f"https://image.strikerxyash.online/outfit-image?avatar_id={character_id}&clothes={outfit_ids}"
-    return url
-
-def fetch_guild_info(clan_id, region="BD"):
-    url = f"{GUILD_API_URL}?clan_id={clan_id}&region={region}"
-    try:
-        res = requests.get(url, timeout=10)
-        if res.status_code == 200:
-            return res.json()
-        return None
-    except Exception as e:
-        print(f"Guild API Error: {e}")
-        return None
 
 # ==========================================
 # KEYBOARD MENUS
@@ -185,7 +121,7 @@ def verify_callback(call):
         bot.answer_callback_query(call.id, "❌ You haven't joined both channels yet! Please join and try again.", show_alert=True)
 
 # ==========================================
-# MAIN INTERCEPTOR & ROUTER
+# MAIN ROUTER & MESSAGE HANDLERS
 # ==========================================
 @bot.message_handler(func=lambda m: True)
 def main_router(message):
@@ -221,113 +157,19 @@ def main_router(message):
         bot.send_message(message.chat.id, msg_text, reply_markup=get_join_keyboard(), parse_mode='HTML')
         return
 
-    # Slash Commands
+    # Commands
     if text in ['/start', '/menu']:
         welcome_msg = get_welcome_text(user_name, user_id)
         bot.send_message(message.chat.id, welcome_msg, reply_markup=get_main_menu(), parse_mode='HTML', disable_web_page_preview=True)
 
     elif text == '/help':
         help_text = (
-            "🛠️ <b>VOID BOT COMMAND CATALOG</b> 🛠️\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            "📌 <b>General Commands:</b>\n"
-            "├─ <code>/start</code>\n"
-            "├─ <code>/menu</code>\n"
-            "└─ <code>/help</code>\n\n"
-            "🎮 <b>Free Fire Tools:</b>\n"
-            "├─ <code>/get [UID or Name]</code>\n"
-            "├─ <code>/guild [Guild ID] [Region]</code>\n"
-            "└─ <code>/like [Region] [UID]</code>\n\n"
+            "🛠️ <b>VOID BOT HELP</b> 🛠️\n"
+            "━━━━━━━━━━━━━━━━━━━━━\n\n"
+            "Use the custom menu buttons below to manage account binds, send OTPs, decode tokens, or update your bio.\n\n"
             "📱 <b>Support:</b> @voidffx1"
         )
         bot.reply_to(message, help_text, parse_mode='HTML', disable_web_page_preview=True)
-
-    elif text.startswith('/guild'):
-        args = text.split()
-        if len(args) < 2:
-            bot.reply_to(message, "❗ <b>Usage:</b> <code>/guild &lt;Guild_ID&gt; [Region]</code>", parse_mode='HTML')
-            return
-        clan_id = args[1]
-        region = args[2].upper() if len(args) > 2 else "BD"
-        
-        sent_msg = bot.reply_to(message, "⏳ <i>Fetching Guild Information...</i>", parse_mode='HTML')
-        guild_data = fetch_guild_info(clan_id, region)
-        
-        if not guild_data or guild_data.get("status") != "success":
-            bot.edit_message_text("❌ Guild details not found or invalid Guild ID/Region.", chat_id=message.chat.id, message_id=sent_msg.message_id)
-            return
-
-        guild_template = (
-            "🏰 <b>GUILD FULL DOSSIER</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━━\n"
-            f"🆔 <b>Guild ID:</b> <code>{escape_html(guild_data.get('guild_id', clan_id))}</code>\n"
-            f"⭐ <b>Guild Level:</b> {escape_html(guild_data.get('guild_level', 'N/A'))}\n"
-            f"🌐 <b>Region:</b> {escape_html(guild_data.get('region', region))}\n"
-            f"👑 <b>Owner UID:</b> <code>{escape_html(guild_data.get('guild_owner_id', 'N/A'))}</code>\n"
-            "━━━━━━━━━━━━━━━━━━━━━\n"
-            f"👥 <b>Members:</b> {escape_html(guild_data.get('current_members', '0'))} / {escape_html(guild_data.get('total_members', '0'))}\n"
-            f"🏆 <b>Glory Points:</b> {escape_html(guild_data.get('glory_points', '0'))}\n"
-            f"💬 <b>Bio:</b> <i>{escape_html(guild_data.get('guild_bio', 'None'))}</i>\n"
-            "━━━━━━━━━━━━━━━━━━━━━"
-        )
-        bot.edit_message_text(guild_template, chat_id=message.chat.id, message_id=sent_msg.message_id, parse_mode='HTML')
-
-    elif text.startswith('/get'):
-        args = text.split(maxsplit=1)
-        if len(args) < 2:
-            bot.reply_to(message, "❗ <b>Usage:</b> <code>/get &lt;UID or Name&gt;</code>", parse_mode='HTML')
-            return
-        
-        search_query = args[1].strip()
-        sent_msg = bot.reply_to(message, "⏳ <i>Fetching player info & outfit...</i>", parse_mode='HTML')
-
-        player_data_tuple = fetch_player_data_by_uid_or_name(search_query)
-        if not player_data_tuple:
-            bot.edit_message_text("❌ Player not found.", chat_id=message.chat.id, message_id=sent_msg.message_id)
-            return
-
-        account_id, nickname, region, full_data = player_data_tuple
-        basic_info = full_data.get("basicInfo", {})
-        outfit_img_url = fetch_outfit_image(full_data)
-
-        dossier = (
-            "🎮 <b>PLAYER DOSSIER</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━━\n"
-            f"👑 <b>Nickname:</b> {escape_html(nickname)}\n"
-            f"🕹️ <b>UID:</b> <code>{escape_html(account_id)}</code>\n"
-            f"🌐 <b>Region:</b> {escape_html(region)}\n"
-            f"⭐ <b>Level:</b> {escape_html(basic_info.get('level', 'N/A'))}\n"
-            f"❤️ <b>Likes:</b> {escape_html(basic_info.get('liked', 'N/A'))}\n"
-            "━━━━━━━━━━━━━━━━━━━━━"
-        )
-
-        bot.delete_message(chat_id=message.chat.id, message_id=sent_msg.message_id)
-        try:
-            bot.send_photo(message.chat.id, photo=outfit_img_url, caption=dossier, parse_mode='HTML')
-        except Exception:
-            bot.send_message(message.chat.id, dossier, parse_mode='HTML')
-
-    elif text.startswith('/like'):
-        args = text.split()
-        if len(args) < 3:
-            bot.reply_to(message, "❗ <b>Usage:</b> <code>/like &lt;Region&gt; &lt;UID&gt;</code>", parse_mode='HTML')
-            return
-        region, uid = args[1], args[2]
-        sent_msg = bot.reply_to(message, "⏳ <i>Processing likes...</i>", parse_mode='HTML')
-        try:
-            res = requests.get(f"{LIKE_API_URL}?uid={uid}&server_name={region}&key=NJM", timeout=10)
-            data = res.json()
-            template = (
-                "<b>🎉 LIKES DISPATCHED 👍</b>\n"
-                "━━━━━━━━━━━━━━━━━━━━━\n"
-                f"👑 <b>Name:</b> {escape_html(data.get('PlayerNickname', 'N/A'))}\n"
-                f"🕹️ <b>UID:</b> <code>{uid}</code>\n"
-                f"❤️ <b>Likes Before:</b> {escape_html(data.get('LikesbeforeCommand', '0'))}\n"
-                f"💚 <b>Likes After:</b> {escape_html(data.get('LikesafterCommand', '0'))}"
-            )
-            bot.edit_message_text(template, chat_id=message.chat.id, message_id=sent_msg.message_id, parse_mode='HTML')
-        except Exception as e:
-            bot.edit_message_text(f"❌ Error: <code>{escape_html(str(e))}</code>", chat_id=message.chat.id, message_id=sent_msg.message_id, parse_mode='HTML')
 
     # Reply Keyboard Handlers
     elif text in ["Single Unsubscribe OTP", "Unbind Email"]:
@@ -338,7 +180,7 @@ def main_router(message):
         msg = bot.reply_to(message, "🔑 <b>Send your Access Token:</b>", parse_mode='HTML')
         bot.register_next_step_handler(msg, process_check_email)
 
-    elif text == "Add Recovery Email":
+    elif text in ["Add Recovery Email", "Change Bind Email"]:
         msg = bot.reply_to(message, "🔑 <b>Step 1:</b> Send your Access Token:", parse_mode='HTML')
         bot.register_next_step_handler(msg, step_add_email_token)
 
@@ -514,5 +356,7 @@ if __name__ == "__main__":
     t.start()
     
     print("🤖 Void Free Fire Bot is running...")
-    bot.remove_webhook()
+    
+    # Safely clear old webhooks and start polling
+    bot.delete_webhook(drop_pending_updates=True)
     bot.infinity_polling(skip_pending=True)
