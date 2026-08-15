@@ -26,7 +26,7 @@ def run():
 # ==========================================
 # BOT CONFIGURATION & SETUP
 # ==========================================
-API_TOKEN = '8928908790:AAFM4aujRYoPs5yE7LkmTu_aJu6vYMS4LQI'
+API_TOKEN = '8928908790:AAEriGEJfCS1N41BuaDN2q8SpABvjUBivV0'
 ADMIN_ID = 8853790254  # Your Telegram User ID
 bot = telebot.TeleBot(API_TOKEN)
 
