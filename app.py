@@ -73,7 +73,8 @@ def get_main_menu():
         types.KeyboardButton("Single Unsubscribe OTP"),
         types.KeyboardButton("Get Token Details"),
         types.KeyboardButton("Update bio"),
-        types.KeyboardButton("Revoke Access Token")
+        types.KeyboardButton("Revoke Access Token"),
+        types.KeyboardButton("Get Security Code")
     )
     return markup
 
@@ -96,6 +97,7 @@ def get_welcome_text(user_name, user_id):
         "• 🔄 Change Bind Email\n"
         "• ⚠️ Cancel Bind Request\n"
         "• 📩 Single Unsubscribe OTP\n"
+        "• 🔐 Get Security Code\n"
         "• 🚫 Revoke Token\n\n"
         "🔑 <b>Don't know how to get Access Token?</b>\n"
         f"👉 <a href='{TOKEN_TUTORIAL_URL}'>Click Here to Get Token</a>\n\n"
@@ -195,6 +197,10 @@ def main_router(message):
     elif text == "Get Token Details":
         msg = bot.reply_to(message, "🔍 <b>Send your Access Token / JWT to decode:</b>", parse_mode='HTML')
         bot.register_next_step_handler(msg, process_decode_token)
+
+    elif text == "Get Security Code":
+         msg = bot.reply_to(message, "🔐 <b>Send your Access Token:</b>", parse_mode='HTML')
+         bot.register_next_step_handler(msg, process_get_security_code)
 
     elif text == "Update bio":
         msg = bot.reply_to(message, "📝 <b>Send Access Token and new bio text separated by space:</b>", parse_mode='HTML')
@@ -296,6 +302,31 @@ def step_add_email_final(message, token, email, verifier_token):
         bot.reply_to(message, f"✅ <b>Bind Request Created!</b> for <code>{email}</code>", parse_mode='HTML')
     else:
         bot.reply_to(message, f"❌ Bind Request Failed:\n<code>{html.escape(res.text)}</code>", parse_mode='HTML')
+
+def process_get_security_code(message):
+    token = message.text.strip()
+    url = "https://100067.connect.garena.com/game/account_security/bind:get_bind_info"
+    params = {'app_id': "100067", 'access_token': token}
+    headers = {'User-Agent': "GarenaMSDK/4.0.19P9(Redmi Note 5 ;Android 9;en;US;)"}
+    
+    try:
+        res = requests.get(url, params=params, headers=headers, timeout=10)
+        if res.status_code == 200:
+            data = res.json()
+            security_code = data.get('security_code', 'Not available')
+            
+            resp_text = (
+                "🔐 <b>SECURITY CODE INFO</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━━\n"
+                f"● <b>Security Code:</b> <code>{security_code}</code>\n"
+                f"● <b>Current Email:</b> <code>{data.get('email', 'None')}</code>\n"
+                "━━━━━━━━━━━━━━━━━━━━━"
+            )
+            bot.reply_to(message, resp_text, parse_mode='HTML')
+        else:
+            bot.reply_to(message, f"❌ API Error {res.status_code}")
+    except Exception as e:
+        bot.reply_to(message, f"❌ Error: {str(e)}")
 
 def process_cancel_bind(message):
     token = message.text.strip()
